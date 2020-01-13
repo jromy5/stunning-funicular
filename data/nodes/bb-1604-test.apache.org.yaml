@@ -1,0 +1,17 @@
+---
+classes:
+  - buildbot_slave
+  - buildbot_slave::rat
+  - buildbot_slave::github
+  - loggy
+
+buildbot_slave::slave_name: 'bb_1604_test_ubuntu'
+buildbot_slave::required_packages:
+  - 'openjdk-8-jdk'
+  - 'tomcat8'
+  - 'libtool'
+  - 'libpcre3' 
+  - 'libpcre3-dev'
+
+buildbot_slave::rat::projects:
+  - 'jmeter'

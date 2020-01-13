@@ -1,0 +1,63 @@
+---
+classes: 
+  - dovecot
+  - mail_relay
+  - postfix_asf
+  - ssl::name::wildcard_apache_org
+
+dovecot::dovecot_packages:
+  - dovecot-core
+  - dovecot-ldap
+
+
+postfix::dbfile:
+  transport_maps:
+    content: |
+      test1.apache.org        smtp:[10.40.0.15]
+      mmpoc.apache.org        smtp:[10.40.0.15]
+      apache.org              smtp:[hermes.apache.org]:2025
+      apachecon.com           smtp:[hermes.apache.org]:2025
+      apachecon.eu            smtp:[hermes.apache.org]:2025
+      subversion.com          smtp:[hermes.apache.org]:2025
+      subversion.net          smtp:[hermes.apache.org]:2025
+      subversion.org          smtp:[hermes.apache.org]:2025
+      *                       smtp:apache.org
+
+
+    
+postfix::server::myhostname:             "%{::fqdn}"
+#
+# IP -> host
+# 209.188.14.139  -> mailrelay1-us-west.apache.org
+# 195.154.156.166 -> pony-poc.apache.org
+# 23.253.172.122  -> nat1-us-mid.apache.org
+# 163.172.69.106  -> moin-vm.apache.org
+# 37.48.69.224/27 -> leaseweb EU block
+# 207.244.88.139/32  jira
+# 163.172.22.{183,184} ponee mail for lists.a.o
+# 176.9.59.70 asf.ui-eu-01.ponee.io
+# 62.210.60.235 -> jenkins-master
+postfix::server::mynetworks:             '127.0.0.0/8 10.41.0.0/16 [::1]/128 [fe80::]/64 209.188.14.139/32 195.154.156.166/32 207.244.88.128/27 163.172.22.183/32 163.172.22.184/32 138.201.36.225/32 23.253.172.122/32 163.172.69.106/32 37.48.69.224/27 207.244.88.139/32 62.210.60.235/32 176.9.59.70/32'
+postfix::server::mydomain:               'apache.org'
+postfix::server::mydestination:          "%{::fqdn}, localhost.%{::domain}, localhost"
+postfix::server::inet_interfaces:        'all'
+postfix::server::message_size_limit:     '15360000'
+postfix::server::relayhost:              '[mail.apache.org]:2025'
+postfix::server::use_tls:                true
+postfix::server::alias_maps:              'hash:/etc/aliases ldap:/etc/postfix/ldap-mail-forward-lookup.cf'
+postfix::server::mail_name:              "ASF Mail Server at %{::fqdn}"
+postfix::server::virtual_transport:      'dovecot'
+postfix::server::smtpd_sender_restrictions:
+  -  'permit_mynetworks'
+  -  'reject_unknown_sender_domain'
+postfix::server::smtpd_recipient_restrictions:    
+  -  'permit_sasl_authenticated'
+  -  'permit_mynetworks'
+  -  'reject_unauth_destination'
+postfix::server::submission_smtpd_client_restrictions: 'permit_mynetworks,permit_sasl_authenticated,reject'
+postfix::server::smtpd_tls_key_file:     '/etc/ssl/private/wildcard.apache.org.key'
+postfix::server::smtpd_tls_cert_file:    '/etc/ssl/private/wildcard.apache.org-combined.cert'
+postfix::server::smtpd_sasl_auth:        'true'
+postfix::server::ssl:                    'wildcard.apache.org'
+postfix::server::submission:             'true'
+postfix::server::transport_maps: 'hash:/etc/postfix/transport_maps'

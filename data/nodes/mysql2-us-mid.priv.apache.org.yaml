@@ -1,0 +1,43 @@
+---
+classes:
+  - datadog_agent::integrations::mysql
+  - mysql::server
+  - mysql_asf::backup
+  - ssl::name::abi_stunnel
+  - stunnel_asf::abi
+  - zmanda_asf::client
+
+datadog_agent::integrations::mysql::host: "%{::ipaddress_eth1}"
+datadog_agent::integrations::mysql::user: 'datadog_slave'
+datadog_agent::integrations::mysql::replication: 1
+
+mysql::server::databases:
+  bugs:
+    ensure: 'present'
+    charset: 'utf8'
+        
+  ooobugs:
+    ensure: 'present'
+    charset: 'utf8'
+    
+  sabugs:
+    ensure: 'present'
+    charset: 'utf8'
+
+mysql::server::override_options:
+  mysqld:
+    max_allowed_packet: '100M'
+    ft_min_word_len: 2
+    bind-address: "%{::ipaddress_eth1}"
+    server-id: 2
+    binlog-format: 'mixed'
+    relay-log: '/var/log/mysql/mysql-relay-bin.log'
+    read-only: 1
+
+ntp::interfaces:
+  - eth1
+  - lo
+
+postfix::server::relayhost: '[mail-relay.apache.org]:587'
+postfix::server::smtp_use_tls: true
+

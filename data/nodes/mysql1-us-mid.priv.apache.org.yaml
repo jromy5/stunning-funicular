@@ -1,0 +1,47 @@
+---
+classes:
+  - datadog_agent::integrations::mysql
+  - mysql_asf::backup
+  - mysql::server
+  - zmanda_asf::client
+
+datadog_agent::integrations::mysql::host: "%{::ipaddress_eth1}"
+datadog_agent::integrations::mysql::user: 'datadog'
+datadog_agent::integrations::mysql::replication: 1
+
+mysql_asf::backup::rsync_offsite: 'true'
+mysql_asf::backup::age: '3d'
+
+mysql::server::databases:
+  bugs:
+    ensure: 'present'
+    charset: 'utf8'
+        
+  ooobugs:
+    ensure: 'present'
+    charset: 'utf8'
+    
+  sabugs:
+    ensure: 'present'
+    charset: 'utf8'
+
+mysql::server::override_options:
+  mysqld:
+    max_allowed_packet: '100M'
+    ft_min_word_len: 2
+    bind-address: "%{::ipaddress_eth1}"
+    server-id: 1
+    binlog-format: 'mixed'
+    log_bin: '/var/log/mysql/mysql-bin.log'
+    innodb_flush_log_at_trx_commit: '1'
+    sync_binlog: '1'
+    binlog-ignore-db: 'mysql'
+    expire-logs-days: '5'
+
+ntp::interfaces:
+  - eth1
+  - lo
+
+postfix::server::relayhost: '[mail-relay.apache.org]:587'
+postfix::server::smtp_use_tls: true
+

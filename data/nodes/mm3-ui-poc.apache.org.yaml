@@ -1,0 +1,110 @@
+---
+classes:
+  - apache
+  - apache::mod::wsgi
+  - postgresql::lib::devel
+  - postgresql::client
+  - python
+  - mailman3::hyperkitty
+  - ssl::name::wildcard_apache_org
+  - vhosts_asf::vhosts
+
+apache::default_vhost: false
+apache::default_ssl_cert: '/etc/ssl/certs/wildcard.apache.org.crt'
+apache::default_ssl_chain: '/etc/ssl/certs/wildcard.apache.org.chain'
+apache::default_ssl_key: '/etc/ssl/private/wildcard.apache.org.key'
+apache::mod::wsgi::wsgi_python_home: '/var/www/hyperkitty/venv2'
+
+apache::mpm_module:         'event'
+
+apache::mod::event::listenbacklog: '511'
+apache::mod::event::maxclients: '500'
+apache::mod::event::maxconnectionsperchild: '5000'
+apache::mod::event::maxrequestworkers: '300'
+apache::mod::event::maxsparethreads: '250'
+apache::mod::event::minsparethreads: '50'
+apache::mod::event::serverlimit: '10'
+apache::mod::event::startservers: '3'
+apache::mod::event::threadlimit: '600'
+apache::mod::event::threadsperchild: '50'
+
+logrotate::rule:
+  apache2:
+    ensure: 'present'
+
+mailman3::hyperkitty::config::app_name: 'ASF List Archives'
+mailman3::hyperkitty::config::mailman_api_url: 'http://10.40.0.15:8001'
+mailman3::hyperkitty::config::db: 'postgresql'
+mailman3::hyperkitty::config::dbhost: '10.40.0.12'
+mailman3::hyperkitty::config::dbname: 'hyperkitty'
+mailman3::hyperkitty::config::dbuser: 'hyperkitty'
+mailman3::hyperkitty::config::mailman_api_url: 'http://10.40.0.15:8001'
+mailman3::hyperkitty::config::allowed_hosts:
+  - '*'
+mailman3::hyperkitty::config::use_ssl: false
+mailman3::hyperkitty::config::browserid_audiences:
+  - 'https://mm3-ui-poc.apache.org'
+  - 'http://mm3-ui-poc.apache.org'
+mailman3::hyperkitty::config::mailman_archiver_from:
+  - '10.40.0.15'
+mailman3::hyperkitty::config::use_internal_auth: true
+mailman3::hyperkitty::config::timezone: 'UTC'
+
+python::version: 'system'
+python::pip: true
+python::dev: true
+python::virtualenv: true
+python::gunicorn: false
+python::manage_gunicorn: true
+
+vhosts_asf::vhosts::vhosts:
+  hyperkitty:
+    vhost_name: '*'
+    port: 80
+    servername: 'mm3-ui-poc.apache.org'
+    default_vhost: true
+    docroot: '/var/www/hyperkitty/hyperkitty_standalone'
+    manage_docroot: false
+    options:
+      - 'FollowSymLinks'
+      - 'MultiViews'
+    access_log_file: 'hyperkitty_access.log'
+    error_log_file: 'hyperkitty_error.log'
+    custom_fragment: |
+      Redirect permanent / https://mm3-ui-poc.apache.org/
+
+  hyperkitty_ssl:
+    vhost_name: '*'
+    port: 443
+    ssl: true
+    servername: 'mm3-ui-poc.apache.org'
+    docroot: '/var/www/hyperkitty/hyperkitty_standalone'
+    manage_docroot: false
+    options:
+      - 'FollowSymLinks'
+      - 'MultiViews'
+    access_log_file: 'hyperkitty_ssl_access.log'
+    error_log_file: 'hyperkitty_error.log'
+    custom_fragment: |
+      Alias /robots.txt  /var/www/hyperkitty/hyperkitty_standalone/static/hyperkitty/robots.txt
+      Alias /favicon.ico /var/www/hyperkitty/hyperkitty_standalone/static/hyperkitty/favicon.ico
+      Alias /static      /var/www/hyperkitty/hyperkitty_standalone/static
+
+      WSGIScriptAlias /hyperkitty /var/www/hyperkitty/hyperkitty_standalone/wsgi.py
+      WSGIDaemonProcess hyperkitty threads=25 python-path=/var/www/hyperkitty/hyperkitty_standalone:/var/www/hyperkitty/venv2/lib/python2.7/site-packages
+
+      <Directory "/var/www/hyperkitty/hyperkitty_standalone">
+        <Files wsgi.py>
+          Order deny,allow
+          Allow from all
+        </Files>
+
+        WSGIProcessGroup hyperkitty
+      </Directory>
+
+      <Directory "/var/www/hyperkitty/hyperkitty_standalone/static">
+        Order deny,allow
+        Allow from all
+      </Directory>
+
+

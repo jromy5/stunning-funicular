@@ -1,0 +1,54 @@
+---
+classes:
+  - firewall
+  - firewall_asf
+  - sysctl_asf
+
+firewall:
+  100-snat:
+    chain: 'POSTROUTING'
+    jump: 'MASQUERADE'
+    outiface: 'eth0'
+    table: 'nat'
+    proto: 'all'
+
+  100-forward-for:
+    chain: 'FORWARD'
+    iniface: 'eth0'
+    outiface: 'eth2'
+    state: ['RELATED', 'ESTABLISHED']
+    action: 'accept'
+    proto: 'all'
+
+  100-forward-from:
+    chain: 'FORWARD'
+    iniface: 'eth2'
+    outiface: 'eth0'
+    action: 'accept'
+    proto: 'all'
+
+  100-zmanda-forward:
+    chain: 'FORWARD'
+    iniface: 'eth0'
+    action: 'accept'
+    proto: 'tcp'
+    port: '22'
+    source: '62.210.89.91'
+    destination: '192.168.3.2'
+
+  100-zmanda-dnat:
+    chain: 'PREROUTING'
+    jump: 'DNAT'
+    table: 'nat'
+    proto: 'tcp'
+    todest: '192.168.3.2:22'
+    iniface: 'eth0'
+    dport: '22'
+    source: '62.210.89.91'
+
+postfix::server::relayhost: '[mail-relay.apache.org]:587'
+postfix::server::smtp_use_tls: true
+
+sysctl:
+  net.ipv4.ip_forward:
+    value: 1
